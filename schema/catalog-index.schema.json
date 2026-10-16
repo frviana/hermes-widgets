@@ -1,0 +1,41 @@
+{
+  "$id": "https://github.com/frviana/hermes-widgets/schema/catalog-index.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Hermes UI widget catalog index",
+  "description": "DRAFT — not final. The authoritative shape will be settled by hermes-ui#120 (manifest standard) and hermes-ui#121 (catalog fetch/validate). This file exists so the repo has a concrete starting point to react to, not as a frozen contract.",
+  "type": "object",
+  "required": ["catalog_version", "widgets"],
+  "properties": {
+    "catalog_version": {
+      "type": "integer",
+      "description": "Version of this index format itself (not of any widget)."
+    },
+    "widgets": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/catalogEntry" }
+    }
+  },
+  "definitions": {
+    "catalogEntry": {
+      "type": "object",
+      "description": "One widget's identity and where to fetch it, mirroring its widget.json so the catalog can be listed without fetching every widget's repo on every page load.",
+      "required": ["id", "name", "version", "repo", "ref", "device_classes"],
+      "properties": {
+        "id": { "type": "string", "description": "Stable, author-namespaced id, e.g. 'frviana.thermostat-plus'." },
+        "name": { "type": "string" },
+        "author": { "type": "string" },
+        "description": { "type": "string" },
+        "version": { "type": "string", "description": "Semver, must match the listed release's widget.json." },
+        "repo": { "type": "string", "description": "owner/repo on GitHub this widget's code lives in." },
+        "ref": { "type": "string", "description": "A pinned release tag — never a branch or HEAD." },
+        "device_classes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "DeviceClass values this widget's device picker is scoped to, per hermes-ui's docs/smart-home/ARCHITECTURE.md §8."
+        },
+        "sdk": { "type": "string", "description": "Widget-SDK compatibility range this was built against (hermes-ui#119)." },
+        "icon": { "type": "string" }
+      }
+    }
+  }
+}

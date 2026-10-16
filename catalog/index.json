@@ -1,0 +1,6 @@
+{
+  "$schema": "../schema/catalog-index.schema.json",
+  "catalog_version": 1,
+  "note": "Placeholder. No widgets are listed yet — the manifest standard (hermes-ui#120) and sandbox SDK (hermes-ui#123) this catalog depends on haven't shipped. Format here is a starting point and may change before hermes-ui#121 (catalog fetch/validate) is implemented.",
+  "widgets": []
+}
