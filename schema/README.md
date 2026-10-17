@@ -8,7 +8,7 @@ Copies of the schemas Hermes UI generates from its models. **Do not edit them he
 | `catalog-index.schema.json` | `catalog/index.json` | `backend/schema/catalog-index.schema.json` |
 
 Both come from `python -m hermes_ui.widgets.codegen` in hermes-ui. When Hermes UI changes the standard, a maintainer copies
-the two files here unchanged, in the same change that relies on them. Last copied from hermes-ui `440325c` (PR #156, the Timer); updated to its merge commit once merged.
+the two files here unchanged, in the same change that relies on them. Last copied from hermes-ui `56da307` (the Timer, hermes-ui#149).
 
 The schemas cover the shape. `scripts/check.py` adds the rules a schema can't express, which are the same ones the portal
 applies:
