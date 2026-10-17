@@ -1,0 +1,56 @@
+{
+  "$schema": "../../schema/widget.schema.json",
+  "manifest_version": 1,
+  "id": "hermes.simple-switch",
+  "name": "Simple switch",
+  "version": "1.0.0",
+  "author": "Hermes UI",
+  "description": "One switch or plug from any connection: its name, on or off, and a large control to change it.",
+  "license": "LicenseRef-Proprietary",
+  "icon": "bolt",
+  "tint": "green",
+  "runtime": { "kind": "declarative", "version": 1 },
+  "device_classes": ["switch", "plug"],
+  "permissions": ["device:read", "device:command"],
+  "default_size": "s",
+  "views": {
+    "s": {
+      "kind": "stack",
+      "children": [
+        { "kind": "value", "field": "device.name", "style": "title" },
+        { "kind": "spacer" },
+        {
+          "kind": "row",
+          "justify": "between",
+          "children": [
+            { "kind": "value", "field": "state.on", "style": "display" },
+            { "kind": "toggle", "field": "state.on" }
+          ]
+        },
+        { "kind": "status" }
+      ]
+    },
+    "m": {
+      "kind": "stack",
+      "children": [
+        {
+          "kind": "row",
+          "children": [
+            { "kind": "icon", "name": "bolt", "tint": "green" },
+            { "kind": "stack", "gap": "none", "children": [
+              { "kind": "value", "field": "device.name", "style": "title" },
+              { "kind": "value", "field": "device.room", "style": "caption",
+                "when": { "field": "device.room", "op": "ne", "value": null } }
+            ] },
+            { "kind": "spacer" },
+            { "kind": "toggle", "field": "state.on" }
+          ]
+        },
+        { "kind": "spacer" },
+        { "kind": "value", "field": "state.on", "style": "display" },
+        { "kind": "value", "field": "state.updated_at", "label": "Updated", "style": "caption" },
+        { "kind": "status" }
+      ]
+    }
+  }
+}
