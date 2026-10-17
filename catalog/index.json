@@ -2,5 +2,26 @@
   "$schema": "../schema/catalog-index.schema.json",
   "catalog_version": 1,
   "note": "The widget store's catalog for Hermes UI. Each entry pins a widget to a commit and its manifest's SHA-256; see CONTRIBUTING.md to list one.",
-  "widgets": []
+  "widgets": [
+    {
+      "id": "hermes.simple-switch",
+      "name": "Simple switch",
+      "author": "Hermes UI",
+      "description": "One switch or plug from any connection: its name, on or off, and a large control to change it.",
+      "version": "1.0.0",
+      "icon": "bolt",
+      "device_classes": [
+        "switch",
+        "plug"
+      ],
+      "runtime": {
+        "kind": "declarative",
+        "version": 1
+      },
+      "repo": "frviana/hermes-widgets",
+      "path": "widgets/simple-switch",
+      "commit": "89e0beaae46ac559631b3bc8ca262a845246c2d3",
+      "manifest_sha256": "fb3ead02357d06540dbe607aab94073ea7fe6e3f80dac2cc7666664b0ef459d4"
+    }
+  ]
 }
