@@ -1,0 +1,50 @@
+{
+  "$schema": "../../schema/widget.schema.json",
+  "manifest_version": 2,
+  "id": "hermes.timer",
+  "name": "Timer",
+  "version": "1.0.0",
+  "author": "Hermes UI",
+  "description": "A kitchen timer: set it, start it, and hear a bell when it's done. It keeps running on every screen and after a reload.",
+  "license": "LicenseRef-Proprietary",
+  "icon": "clock",
+  "tint": "orange",
+  "runtime": { "kind": "declarative", "version": 3 },
+  "binding": { "kind": "none", "timer": { "default_duration_s": 300, "max_duration_s": 7200, "chime": "bell" } },
+  "permissions": [],
+  "default_size": "s",
+  "views": {
+    "s": {
+      "kind": "stack",
+      "align": "center",
+      "children": [
+        { "kind": "timer" },
+        { "kind": "row", "justify": "center", "gap": "s", "children": [
+          { "kind": "button", "action": "timer.start", "label": "Start", "icon": "play",
+            "when": { "field": "timer.running", "value": false } },
+          { "kind": "button", "action": "timer.pause", "label": "Pause", "icon": "pause",
+            "when": { "field": "timer.running", "value": true } },
+          { "kind": "button", "action": "timer.reset", "label": "Reset" }
+        ] }
+      ]
+    },
+    "m": {
+      "kind": "row",
+      "justify": "between",
+      "children": [
+        { "kind": "timer" },
+        { "kind": "stack", "align": "end", "children": [
+          { "kind": "text", "text": "Done!", "style": "title", "when": { "field": "timer.finished", "value": true } },
+          { "kind": "stepper", "field": "timer.duration", "label": "Duration" },
+          { "kind": "row", "justify": "end", "gap": "s", "children": [
+            { "kind": "button", "action": "timer.start", "label": "Start", "icon": "play",
+              "when": { "field": "timer.running", "value": false } },
+            { "kind": "button", "action": "timer.pause", "label": "Pause", "icon": "pause",
+              "when": { "field": "timer.running", "value": true } },
+            { "kind": "button", "action": "timer.reset", "label": "Reset" }
+          ] }
+        ] }
+      ]
+    }
+  }
+}

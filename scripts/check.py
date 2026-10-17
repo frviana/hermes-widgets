@@ -34,6 +34,13 @@ MAX_MANIFEST_BYTES = 32 * 1024
 MAX_NODES = 60
 MAX_DEPTH = 6
 CONTROLS = {"toggle", "slider", "stepper", "choice", "button"}
+# What each binding's views may use (hermes-ui ADR 0010): the fields of a data source's provider, the timer's
+# fields and controls, and the actions that are the host's own rather than device commands.
+SOURCE_FIELDS = {"youtube_oembed": {"source.title", "source.channel"}}
+SOURCE_OPENS = {"youtube_oembed"}
+TIMER_FIELDS = {"timer.remaining", "timer.duration", "timer.running", "timer.finished"}
+TIMER_ACTIONS = {"timer.start", "timer.pause", "timer.reset"}
+LOCAL_ACTIONS = {"source.open", *TIMER_ACTIONS}
 
 
 def load(raw: bytes) -> Any:
@@ -51,9 +58,69 @@ def _walk(node: dict, depth: int, found: dict) -> None:
         found["errors"].append(f"components are nested more than {MAX_DEPTH} deep")
         return
     found["count"] += 1
-    found["controls"] |= {node["kind"]} & CONTROLS
+    found["nodes"].append(node)
     for child in node.get("children", ()):
         _walk(child, depth + 1, found)
+
+
+def binding_of(manifest: dict) -> dict:
+    """What the widget is tied to: version 1 is always a device."""
+    return manifest.get("binding") or {"kind": "device", "device_classes": manifest.get("device_classes") or []}
+
+
+def classes_of(manifest: dict) -> list[str]:
+    b = binding_of(manifest)
+    return list(b["device_classes"]) if b["kind"] == "device" else []
+
+
+def _binding_problems(manifest: dict, nodes: list[dict]) -> list[str]:
+    """Views use only their binding's fields and controls, and permissions say exactly that (the portal's rules)."""
+    b = binding_of(manifest)
+    kind, timer = b["kind"], bool(b.get("timer"))
+    runtime = manifest["runtime"]["version"]
+    errors = []
+    if kind == "source" and runtime < 2:
+        errors.append("a source binding needs runtime version 2")
+    if timer and runtime < 3:
+        errors.append("a timer needs runtime version 3")
+    if timer and b["timer"]["default_duration_s"] > b["timer"]["max_duration_s"]:
+        errors.append("default_duration_s can't be more than max_duration_s")
+    allowed = (SOURCE_FIELDS.get(b.get("provider"), set()) if kind == "source" else TIMER_FIELDS if timer
+               else set() if kind == "none" else None)   # None: a device's device.* and state.*
+    commands = set()
+    for node in nodes:
+        timer_control = ((node["kind"] == "button" and node.get("action") in TIMER_ACTIONS)
+                         or (node["kind"] == "stepper" and node.get("field") == "timer.duration"))
+        if (node["kind"] == "timer" or timer_control) and not timer:
+            errors.append(f"{node.get('action') or node.get('field') or 'the timer component'} needs a none binding with a timer")
+        when = node.get("when") or {}
+        for field in filter(None, (node.get("field"), when.get("field"))):
+            ok = field.startswith(("device.", "state.")) if allowed is None else field in allowed
+            if not ok:
+                errors.append(f"field {field!r} isn't available to a {kind} binding")
+        if "has" in when and kind != "device":
+            errors.append("a 'has' condition needs a device binding")
+        if node["kind"] in CONTROLS:
+            action = node.get("action")
+            if kind == "device" and action == "source.open":
+                errors.append("'source.open' needs a source binding")
+            elif kind == "source" and not (action == "source.open" and b.get("provider") in SOURCE_OPENS):
+                errors.append("a source binding can't have this control")
+            elif kind == "none" and not (timer and timer_control):
+                errors.append("a none binding can't have this control")
+            elif kind == "device" and action not in LOCAL_ACTIONS:
+                commands.add(node["kind"])
+    perms = set(manifest["permissions"])
+    if kind == "device":
+        if "device:read" not in perms or "source:read" in perms:
+            errors.append("a device widget's permissions are 'device:read', plus 'device:command' with controls")
+        elif bool(commands) != ("device:command" in perms):
+            errors.append("permissions must include 'device:command' exactly when a view has a control")
+    elif kind == "source" and perms != {"source:read"}:
+        errors.append("a source widget's permissions are exactly ['source:read']")
+    elif kind == "none" and perms:
+        errors.append("a widget tied to nothing has no permissions")
+    return list(dict.fromkeys(errors))
 
 
 def manifest_problems(raw: bytes) -> tuple[dict | None, list[str]]:
@@ -68,26 +135,28 @@ def manifest_problems(raw: bytes) -> tuple[dict | None, list[str]]:
               for e in sorted(validator("widget.schema.json").iter_errors(manifest), key=lambda e: list(e.absolute_path))]
     if errors:
         return manifest, errors[:10]
+    if manifest["manifest_version"] == 1 and ("binding" in manifest or "device_classes" not in manifest):
+        errors.append("manifest version 1 has device_classes and no binding")
+    if manifest["manifest_version"] == 2 and ("binding" not in manifest or "device_classes" in manifest):
+        errors.append("manifest version 2 has a binding; device_classes goes inside a device binding")
     views = {size: view for size, view in manifest["views"].items() if view is not None}
     if not views:
         errors.append("views needs at least one size (s, m or l)")
     if manifest["default_size"] not in views:
         errors.append(f"default_size {manifest['default_size']!r} has no view")
-    controls: set[str] = set()
+    nodes: list[dict] = []
     for size, view in views.items():
-        found = {"count": 0, "controls": set(), "errors": []}
+        found = {"count": 0, "nodes": [], "errors": []}
         _walk(view, 1, found)
         errors += found["errors"]
         if found["count"] > MAX_NODES:
             errors.append(f"views.{size} has {found['count']} components; the limit is {MAX_NODES}")
-        controls |= found["controls"]
-    for key in ("device_classes", "permissions"):
-        if len(set(manifest[key])) != len(manifest[key]):
+        nodes += found["nodes"]
+    for key, values in (("device_classes", classes_of(manifest)), ("permissions", manifest["permissions"])):
+        if len(set(values)) != len(values):
             errors.append(f"{key}: values must be unique")
-    if "device:read" not in manifest["permissions"]:
-        errors.append("permissions must include 'device:read'")
-    if bool(controls) != ("device:command" in manifest["permissions"]):
-        errors.append("permissions must include 'device:command' exactly when a view has a control")
+    if not errors:
+        errors += _binding_problems(manifest, nodes)
     return manifest, errors
 
 
@@ -116,8 +185,8 @@ def entry_for(folder: Path, commit: str | None = None, tag: str | None = None) -
     manifest, errors = manifest_problems(raw)
     if errors:
         raise SystemExit(f"{file} is not valid:\n  " + "\n  ".join(errors))
-    entry = {key: manifest[key] for key in ("id", "name", "author", "description", "version", "icon", "device_classes", "runtime")}
-    entry |= {"repo": REPO, "path": path, "commit": commit, "manifest_sha256": hashlib.sha256(raw).hexdigest()}
+    entry = {key: manifest[key] for key in ("id", "name", "author", "description", "version", "icon")}
+    entry |= {"device_classes": classes_of(manifest), "runtime": manifest["runtime"], "repo": REPO, "path": path, "commit": commit, "manifest_sha256": hashlib.sha256(raw).hexdigest()}
     if tag:
         entry["tag"] = tag
     return entry
@@ -163,7 +232,7 @@ def check() -> int:
                 for key in ("id", "version", "runtime"):
                     if manifest[key] != entry.get(key):
                         problems.append(f"{where}: {key} differs from the manifest's")
-                if sorted(manifest["device_classes"]) != sorted(entry.get("device_classes", [])):
+                if sorted(classes_of(manifest)) != sorted(entry.get("device_classes", [])):
                     problems.append(f"{where}: device_classes differ from the manifest's")
             branch = "origin/main" if subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--verify", "-q", "origin/main"],
                                                      capture_output=True).returncode == 0 else "HEAD"
@@ -193,9 +262,8 @@ def dev_catalog(out: Path) -> int:
         target = out / "widgets" / file.parent.name / "widget.json"
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(raw)
-        entries.append({key: manifest[key] for key in ("id", "name", "author", "description", "version", "icon",
-                                                       "device_classes", "runtime")}
-                       | {"repo": REPO, "path": f"widgets/{file.parent.name}", "commit": "0" * 40,
+        entries.append({key: manifest[key] for key in ("id", "name", "author", "description", "version", "icon")}
+                       | {"device_classes": classes_of(manifest), "runtime": manifest["runtime"], "repo": REPO, "path": f"widgets/{file.parent.name}", "commit": "0" * 40,
                           "manifest_sha256": hashlib.sha256(raw).hexdigest()})
     (out / "catalog").mkdir(parents=True, exist_ok=True)
     (out / "catalog" / "index.json").write_text(json.dumps({"catalog_version": 1, "widgets": entries}, indent=2) + "\n")

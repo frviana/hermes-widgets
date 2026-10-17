@@ -1,0 +1,44 @@
+{
+  "$schema": "../../schema/widget.schema.json",
+  "manifest_version": 2,
+  "id": "hermes.video",
+  "name": "Video",
+  "version": "1.0.0",
+  "author": "Hermes UI",
+  "description": "One YouTube video: its title and channel, with a button that opens it on YouTube. No player and no thumbnail.",
+  "license": "LicenseRef-Proprietary",
+  "icon": "play",
+  "tint": "red",
+  "runtime": { "kind": "declarative", "version": 2 },
+  "binding": { "kind": "source", "provider": "youtube_oembed" },
+  "permissions": ["source:read"],
+  "default_size": "m",
+  "views": {
+    "s": {
+      "kind": "stack",
+      "children": [
+        { "kind": "value", "field": "source.title", "style": "title" },
+        { "kind": "value", "field": "source.channel", "style": "caption" },
+        { "kind": "spacer" },
+        { "kind": "button", "action": "source.open", "label": "Watch", "icon": "play" },
+        { "kind": "status" }
+      ]
+    },
+    "m": {
+      "kind": "stack",
+      "children": [
+        { "kind": "row", "gap": "s", "children": [
+          { "kind": "icon", "name": "play", "tint": "red" },
+          { "kind": "text", "text": "YouTube", "style": "caption" }
+        ] },
+        { "kind": "value", "field": "source.title", "style": "title" },
+        { "kind": "value", "field": "source.channel", "style": "body" },
+        { "kind": "spacer" },
+        { "kind": "row", "justify": "end", "children": [
+          { "kind": "button", "action": "source.open", "label": "Watch on YouTube", "icon": "play" }
+        ] },
+        { "kind": "status" }
+      ]
+    }
+  }
+}

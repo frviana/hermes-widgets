@@ -116,6 +116,7 @@
           "type": "string"
         },
         "device_classes": {
+          "description": "The manifest's device classes; empty for a widget not tied to a device (ADR 0010).",
           "items": {
             "enum": [
               "light",
@@ -131,7 +132,6 @@
             "type": "string"
           },
           "maxItems": 4,
-          "minItems": 1,
           "title": "Device Classes",
           "type": "array"
         },
@@ -186,7 +186,6 @@
         "description",
         "version",
         "icon",
-        "device_classes",
         "runtime",
         "repo",
         "commit",
