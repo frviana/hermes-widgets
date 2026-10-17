@@ -1,79 +1,37 @@
 # hermes-widgets
 
-The widget store for [Hermes UI](https://github.com/frviana/hermes-ui)'s dashboard: a catalog of
-installable widgets that can be added to the dashboard **without rebuilding or redeploying the
-portal**, alongside the widgets that ship built into the app.
+The widget store for [Hermes UI](https://github.com/frviana/hermes-ui)'s dashboard. This repository holds the catalog of widgets an admin can install from the dashboard's **Store** tab, without rebuilding or redeploying Hermes UI.
 
-This repository is the development-phase **catalog** — the index Hermes UI's portal backend reads
-to know which widgets exist, where to fetch each one from, and at which pinned release. It plays
-the same role [HACS](https://hacs.xyz/)'s default-repositories list plays for Home Assistant: one
-widget per repository (or per entry here while the catalog is small), each with its own manifest
-and versioned releases, reviewed before being listed.
+It plays the role [HACS](https://hacs.xyz/)'s default list plays for Home Assistant:
+- **The catalog**, `catalog/index.json`: every listed widget, each pinned to a commit and to the SHA-256 of its manifest.
+- **The widgets** themselves: one folder each in `widgets/` while the catalog is small, or their own repositories later.
+- **Review:** every listing is a reviewed pull request.
 
-**Status: planning.** Tracked by [hermes-ui#118](https://github.com/frviana/hermes-ui/issues/118)
-(epic) and its sub-issues. Nothing here is installable yet — the trust/sandbox model
-([#119](https://github.com/frviana/hermes-ui/issues/119)) and the manifest standard
-([#120](https://github.com/frviana/hermes-ui/issues/120)) need an owner decision and an
-implementation in `hermes-ui` before this catalog's format is final. The structure below is a
-starting point, not a frozen contract.
+## How it works
+- **Widgets are declarative.** A widget is one `widget.json`: a view made of Hermes UI's own components, bound to one device the admin picks ([hermes-ui ADR 0008](https://github.com/frviana/hermes-ui/blob/main/docs/decisions/0008-installed-widgets-declarative-first.md)). It runs no code, loads no styles or images, can't reach the network and can't see other devices. Hermes UI builds every command itself, for the assigned device only, and shows the real outcome.
+- **The portal reads this catalog server-side.** The browser never contacts GitHub.
+  - The portal checks each widget's pinned commit and hash and validates its manifest again.
+  - Anything that fails is left out of the store, with a reason.
+  - Admins review exactly what a widget can do, in plain words, before installing or updating it.
+- **Installed widgets keep working if this repository changes.** Portals store the exact bytes that were reviewed. A new version shows up as **Update**, never as an automatic change.
 
-## How this fits together
-
-| Piece | Lives in | Tracked by |
-|---|---|---|
-| Trust model and sandbox (iframe + scoped SDK) | `hermes-ui` (portal + frontend) | [#119](https://github.com/frviana/hermes-ui/issues/119) |
-| Widget manifest standard (`widget.json`) | Documented here and in `hermes-ui` docs | [#120](https://github.com/frviana/hermes-ui/issues/120) |
-| Catalog fetch, cache, validation | `hermes-ui` backend reads **this repo** | [#121](https://github.com/frviana/hermes-ui/issues/121) |
-| Install / update / remove UI | `hermes-ui` frontend + backend | [#122](https://github.com/frviana/hermes-ui/issues/122) |
-| Sandboxed runtime widgets execute in | `hermes-ui` frontend | [#123](https://github.com/frviana/hermes-ui/issues/123) |
-| Installed-widget storage and admin API | `hermes-ui` backend | [#124](https://github.com/frviana/hermes-ui/issues/124) |
-| Built-in widget catalog (ships with the app, no store needed) | `hermes-ui` frontend | [#125](https://github.com/frviana/hermes-ui/issues/125) |
-| Author guide and submission process for this repo | Documented here | [#126](https://github.com/frviana/hermes-ui/issues/126) |
-
-## Repository layout
-
+## Layout
 ```
-catalog/        The index Hermes UI's backend fetches: catalog/index.json
-                 lists every available widget, its repo/release and identity
-                 fields. One entry per widget while the catalog is small;
-                 may move to one-repo-per-widget as it grows (HACS's model).
-widgets/        Each widget's own folder: its widget.json manifest, source,
-                 and built bundle for a release (added as the first real
-                 widgets are built, once #119/#120 land).
-schema/         JSON Schema for widget.json and for catalog/index.json, so
-                 hermes-ui and anyone authoring a widget validate the same
-                 shape. Placeholder until #120 is decided.
-docs/           Author-facing documentation: how to build, package and
-                 submit a widget (#126), and the standard itself (#120).
+catalog/index.json      the listing every portal reads (pinned entries)
+widgets/<name>/         one widget: widget.json and a README
+schema/                 JSON Schemas for widget.json and the index (copies from hermes-ui; do not edit)
+scripts/check.py        the portal's checks, for authors and CI; also prints entries and builds a dev catalog
+docs/AUTHORING.md       building a widget, step by step
+CONTRIBUTING.md         submitting, pinning, reviewing, new versions, taking a widget down
 ```
 
-## Device-assignment standard
+## Building and listing a widget
+- **Build it:** [docs/AUTHORING.md](docs/AUTHORING.md) works through the starter widget, [`widgets/simple-switch`](widgets/simple-switch/).
+- **Check it:** `pip install jsonschema && python3 scripts/check.py`.
+- **List it:** [CONTRIBUTING.md](CONTRIBUTING.md). Submit the widget, then pin its merged commit in the catalog. The review checklist is in §3.
 
-Every widget that targets a device type (thermostat, light, switch, …) follows the same pattern
-Hermes UI's own built-in widgets use — a device picker scoped to the device class, generic
-`/api/home/*` routes for state and commands, and display/limits derived from the device's own
-capability descriptor, never hardcoded to one gateway. See
-[`docs/smart-home/ARCHITECTURE.md` §8](https://github.com/frviana/hermes-ui/blob/main/docs/smart-home/ARCHITECTURE.md)
-in `hermes-ui` for the full standard. A widget built this way works against Home Assistant today
-and any other connected gateway later, with no widget-side change.
-
-## Security model (summary)
-
-Widgets from this catalog are **not trusted the way built-in widgets are**. The plan
-([#119](https://github.com/frviana/hermes-ui/issues/119)) is for installed widgets to run inside a
-sandboxed iframe with a narrow, versioned `postMessage` SDK that can only read and command the
-specific device(s) a widget instance was assigned — never the full dashboard session, never other
-devices, never voice. Listing in this catalog is a first filter (manifest validation, a maintainer
-review of the submission), not the security boundary; the sandbox is.
-
-## Contributing a widget
-
-Not open yet — the manifest standard and sandbox SDK it must be written against don't exist yet.
-Once [#120](https://github.com/frviana/hermes-ui/issues/120) and
-[#123](https://github.com/frviana/hermes-ui/issues/123) land, `docs/AUTHORING.md` (tracked by
-[#126](https://github.com/frviana/hermes-ui/issues/126)) will cover the full process: building a
-widget against the manifest and SDK, and submitting it here for listing.
+## Configuring a portal
+Hermes UI reads `frviana/hermes-widgets` at `main` by default (`HERMES_UI_WIDGETS_CATALOG_REPO`, `…_REF`). While this repository is private, the portal needs a read-only token (fine-grained, *Contents: read*, this repository only) in a 0600 file named by `HERMES_UI_WIDGETS_GITHUB_TOKEN_FILE`. Details are in hermes-ui's `docs/smart-home/WIDGET_STORE.md`.
 
 ## License
-
-Private, all rights reserved. Not for redistribution.
+Private, all rights reserved. Not for redistribution. A listed widget states its own licence in its manifest.

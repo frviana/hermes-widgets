@@ -1,6 +1,6 @@
 {
   "$schema": "../schema/catalog-index.schema.json",
   "catalog_version": 1,
-  "note": "Placeholder. No widgets are listed yet — the manifest standard (hermes-ui#120) and sandbox SDK (hermes-ui#123) this catalog depends on haven't shipped. Format here is a starting point and may change before hermes-ui#121 (catalog fetch/validate) is implemented.",
+  "note": "The widget store's catalog for Hermes UI. Each entry pins a widget to a commit and its manifest's SHA-256; see CONTRIBUTING.md to list one.",
   "widgets": []
 }
