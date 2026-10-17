@@ -22,6 +22,40 @@
       "path": "widgets/simple-switch",
       "commit": "89e0beaae46ac559631b3bc8ca262a845246c2d3",
       "manifest_sha256": "fb3ead02357d06540dbe607aab94073ea7fe6e3f80dac2cc7666664b0ef459d4"
+    },
+    {
+      "id": "hermes.timer",
+      "name": "Timer",
+      "author": "Hermes UI",
+      "description": "A kitchen timer: set it, start it, and hear a bell when it's done. It keeps running on every screen and after a reload.",
+      "version": "1.0.0",
+      "icon": "clock",
+      "device_classes": [],
+      "runtime": {
+        "kind": "declarative",
+        "version": 3
+      },
+      "repo": "frviana/hermes-widgets",
+      "path": "widgets/timer",
+      "commit": "e36ed8ba480a2c96e028f7d350b6aaeb96dcbec1",
+      "manifest_sha256": "8ec116f623b8a005385e038c639bda7fbd691567d5fddb192059b34f5432d00e"
+    },
+    {
+      "id": "hermes.video",
+      "name": "Video",
+      "author": "Hermes UI",
+      "description": "One YouTube video: its title and channel, with a button that opens it on YouTube. No player and no thumbnail.",
+      "version": "1.0.0",
+      "icon": "play",
+      "device_classes": [],
+      "runtime": {
+        "kind": "declarative",
+        "version": 2
+      },
+      "repo": "frviana/hermes-widgets",
+      "path": "widgets/video",
+      "commit": "e36ed8ba480a2c96e028f7d350b6aaeb96dcbec1",
+      "manifest_sha256": "9e4ea1d9f809e7be020cb28b7a93db635a7acccbb4d21f7e10188582f76c99d8"
     }
   ]
 }
