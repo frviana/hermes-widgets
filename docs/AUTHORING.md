@@ -39,7 +39,7 @@ The folder is named after the second part of your widget's id (`yourname.porch-s
 - **`license`:** an SPDX identifier. The review asks for one.
 - **`icon`:** one of `bolt`, `box`, `bulb`, `check`, `clock`, `fan`, `home`, `leaf`, `minus`, `music`, `pause`, `play`, `plus`, `sparkles`, `speaker`, `sun` or `thermo`.
 - **`tint`:** one of `blue`, `red`, `orange`, `amber`, `pink`, `violet`, `indigo`, `green`, `teal`, `yellow` or `brown`.
-- **`runtime`:** the lowest declarative runtime your views need. Version 1 is everything in this guide.
+- **`runtime`:** the lowest declarative runtime your views need. Version 1 is everything in this guide except a data source (version 2) and a timer (version 3), below.
 
 ## 4. Devices and permissions
 ```json
@@ -49,6 +49,18 @@ The folder is named after the second part of your widget's id (`yourname.porch-s
 ```
 - **`device_classes`:** what the device picker offers (1 to 4 of `light`, `switch`, `plug`, `fan`, `sensor`, `thermostat`, `cover`, `media_player`, `other`). Each widget instance gets one device.
 - **`permissions`:** `device:read` always; add `device:command` only if a view has a control. Asking for more than the views use is refused. Admins see what the widget can do, worked out from your views, before they install it, for example "Turn on and off".
+
+### Widgets that aren't tied to a device
+Manifest version 2 says what a widget is tied to with a **`binding`** instead of `device_classes` ([hermes-ui ADR 0010](https://github.com/frviana/hermes-ui/blob/main/docs/decisions/0010-widget-bindings-beyond-devices.md)). The starter is version 1, which Hermes UI still reads as a device widget.
+
+| `binding` | `permissions` | Views can use | Example |
+|---|---|---|---|
+| `{"kind": "device", "device_classes": ["switch", "plug"]}` | as above | `device.*`, `state.*` and device controls | the starter, as version 2 |
+| `{"kind": "source", "provider": "youtube_oembed"}` (runtime 2) | `["source:read"]` | `source.title`, `source.channel`, and a `button` with `source.open` | [`widgets/video`](../widgets/video/widget.json) |
+| `{"kind": "none", "timer": {"default_duration_s": 300, "max_duration_s": 7200, "chime": "bell"}}` (runtime 3) | `[]` | the `timer` component, `timer.remaining`, `timer.duration`, `timer.running`, `timer.finished`, buttons `timer.start`, `timer.pause`, `timer.reset`, and a `stepper` on `timer.duration` | [`widgets/timer`](../widgets/timer/widget.json) |
+| `{"kind": "none"}` | `[]` | fixed text and icons only | |
+
+A data source is code in Hermes UI: a widget only names one, never a URL. Hermes UI makes the calls, and the person adding the widget fills in the source's settings (for YouTube, a link or a video ID). A timer is Hermes UI's too: it keeps the time, plays the chime (`bell`, `chime` or `beep`) and shows the notification. The full rules are in Hermes UI's `docs/smart-home/WIDGET_STANDARD.md`.
 
 ## 5. Views
 One view per dashboard size you support (`s`, `m`, `l`). A view is a tree of components. The starter's Small view:

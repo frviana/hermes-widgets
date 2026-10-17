@@ -19,7 +19,11 @@
       "title": "$Schema"
     },
     "manifest_version": {
-      "const": 1,
+      "description": "2 since bindings (ADR 0010); 1 is still read, as a device binding.",
+      "enum": [
+        1,
+        2
+      ],
       "title": "Manifest Version",
       "type": "integer"
     },
@@ -116,38 +120,77 @@
     "runtime": {
       "$ref": "#/$defs/Runtime"
     },
+    "binding": {
+      "anyOf": [
+        {
+          "discriminator": {
+            "mapping": {
+              "device": "#/$defs/DeviceBinding",
+              "none": "#/$defs/NoneBinding",
+              "source": "#/$defs/SourceBinding"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/DeviceBinding"
+            },
+            {
+              "$ref": "#/$defs/NoneBinding"
+            },
+            {
+              "$ref": "#/$defs/SourceBinding"
+            }
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "What the widget is tied to (manifest version 2, required): a device, nothing, or a source.",
+      "title": "Binding"
+    },
     "device_classes": {
-      "description": "The classes the device picker offers; one device per widget instance. Sensitive classes (lock, garage_door, gate, alarm, camera) are refused.",
-      "items": {
-        "enum": [
-          "light",
-          "switch",
-          "plug",
-          "fan",
-          "sensor",
-          "thermostat",
-          "cover",
-          "media_player",
-          "other"
-        ],
-        "type": "string"
-      },
-      "maxItems": 4,
-      "minItems": 1,
-      "title": "Device Classes",
-      "type": "array"
+      "anyOf": [
+        {
+          "items": {
+            "enum": [
+              "light",
+              "switch",
+              "plug",
+              "fan",
+              "sensor",
+              "thermostat",
+              "cover",
+              "media_player",
+              "other"
+            ],
+            "type": "string"
+          },
+          "maxItems": 4,
+          "minItems": 1,
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Manifest version 1 only (version 2 puts them in the device binding): the classes the device picker offers. Sensitive classes (lock, garage_door, gate, alarm, camera) are refused.",
+      "title": "Device Classes"
     },
     "permissions": {
-      "description": "'device:read' always; 'device:command' exactly when a view has a control.",
+      "description": "Device: 'device:read', plus 'device:command' exactly when a view has a control. Source: 'source:read'. None: none.",
       "items": {
         "enum": [
           "device:read",
-          "device:command"
+          "device:command",
+          "source:read"
         ],
         "type": "string"
       },
       "maxItems": 2,
-      "minItems": 1,
       "title": "Permissions",
       "type": "array"
     },
@@ -173,15 +216,14 @@
     "description",
     "icon",
     "runtime",
-    "device_classes",
     "permissions",
     "default_size",
     "views"
   ],
   "title": "WidgetManifest",
   "type": "object",
-  "x-manifest-version": 1,
-  "x-runtime-version": 1,
+  "x-manifest-version": 2,
+  "x-runtime-version": 3,
   "$defs": {
     "ButtonNode": {
       "additionalProperties": false,
@@ -219,7 +261,11 @@
             "media_player.previous",
             "cover.open",
             "cover.close",
-            "cover.stop"
+            "cover.stop",
+            "source.open",
+            "timer.start",
+            "timer.pause",
+            "timer.reset"
           ],
           "title": "Action",
           "type": "string"
@@ -344,6 +390,44 @@
       "title": "ChoiceNode",
       "type": "object"
     },
+    "DeviceBinding": {
+      "additionalProperties": false,
+      "description": "One device of these classes, chosen in the host's device picker (ARCHITECTURE §8).",
+      "properties": {
+        "kind": {
+          "const": "device",
+          "title": "Kind",
+          "type": "string"
+        },
+        "device_classes": {
+          "description": "The classes the device picker offers; one device per widget instance. Sensitive classes (lock, garage_door, gate, alarm, camera) are refused.",
+          "items": {
+            "enum": [
+              "light",
+              "switch",
+              "plug",
+              "fan",
+              "sensor",
+              "thermostat",
+              "cover",
+              "media_player",
+              "other"
+            ],
+            "type": "string"
+          },
+          "maxItems": 4,
+          "minItems": 1,
+          "title": "Device Classes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "device_classes"
+      ],
+      "title": "DeviceBinding",
+      "type": "object"
+    },
     "FieldCondition": {
       "additionalProperties": false,
       "description": "Shown when a field equals (``eq``) or differs from (``ne``) a constant; ``null`` means not reported.",
@@ -374,7 +458,13 @@
             "state.muted",
             "state.media_title",
             "state.media_artist",
-            "state.updated_at"
+            "state.updated_at",
+            "source.title",
+            "source.channel",
+            "timer.remaining",
+            "timer.duration",
+            "timer.running",
+            "timer.finished"
           ],
           "title": "Field",
           "type": "string"
@@ -496,6 +586,34 @@
       "title": "IconNode",
       "type": "object"
     },
+    "NoneBinding": {
+      "additionalProperties": false,
+      "description": "Nothing outside the portal: fixed text and icons, or a host primitive, the timer (ADR 0010 §4).",
+      "properties": {
+        "kind": {
+          "const": "none",
+          "title": "Kind",
+          "type": "string"
+        },
+        "timer": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimerConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A timer the host runs for each instance (runtime 3)."
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "NoneBinding",
+      "type": "object"
+    },
     "RowNode": {
       "additionalProperties": false,
       "description": "Children left to right.",
@@ -568,6 +686,7 @@
                 "status": "#/$defs/StatusNode",
                 "stepper": "#/$defs/StepperNode",
                 "text": "#/$defs/TextNode",
+                "timer": "#/$defs/TimerNode",
                 "toggle": "#/$defs/ToggleNode",
                 "value": "#/$defs/ValueNode"
               },
@@ -609,6 +728,9 @@
               },
               {
                 "$ref": "#/$defs/ButtonNode"
+              },
+              {
+                "$ref": "#/$defs/TimerNode"
               }
             ]
           },
@@ -697,6 +819,28 @@
         "label"
       ],
       "title": "SliderNode",
+      "type": "object"
+    },
+    "SourceBinding": {
+      "additionalProperties": false,
+      "description": "One item from a host-registered, read-only data source, chosen in the widget's settings (ADR 0010 §3).\nThe provider is named, never a URL.",
+      "properties": {
+        "kind": {
+          "const": "source",
+          "title": "Kind",
+          "type": "string"
+        },
+        "provider": {
+          "const": "youtube_oembed",
+          "title": "Provider",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "provider"
+      ],
+      "title": "SourceBinding",
       "type": "object"
     },
     "SpacerNode": {
@@ -792,6 +936,7 @@
                 "status": "#/$defs/StatusNode",
                 "stepper": "#/$defs/StepperNode",
                 "text": "#/$defs/TextNode",
+                "timer": "#/$defs/TimerNode",
                 "toggle": "#/$defs/ToggleNode",
                 "value": "#/$defs/ValueNode"
               },
@@ -833,6 +978,9 @@
               },
               {
                 "$ref": "#/$defs/ButtonNode"
+              },
+              {
+                "$ref": "#/$defs/TimerNode"
               }
             ]
           },
@@ -907,7 +1055,10 @@
           "type": "string"
         },
         "field": {
-          "const": "state.target_temperature",
+          "enum": [
+            "state.target_temperature",
+            "timer.duration"
+          ],
           "title": "Field",
           "type": "string"
         },
@@ -976,6 +1127,75 @@
         "text"
       ],
       "title": "TextNode",
+      "type": "object"
+    },
+    "TimerConfig": {
+      "additionalProperties": false,
+      "description": "A kitchen timer the host runs (ADR 0010 §4): one per widget instance, its state kept by the portal.",
+      "properties": {
+        "default_duration_s": {
+          "description": "What a new timer is set to, in seconds.",
+          "maximum": 86400,
+          "minimum": 1,
+          "title": "Default Duration S",
+          "type": "integer"
+        },
+        "max_duration_s": {
+          "description": "The most it can be set to, up to 24 hours.",
+          "maximum": 86400,
+          "minimum": 60,
+          "title": "Max Duration S",
+          "type": "integer"
+        },
+        "chime": {
+          "default": "bell",
+          "description": "The sound the host plays when it ends, from a fixed set.",
+          "enum": [
+            "bell",
+            "chime",
+            "beep"
+          ],
+          "title": "Chime",
+          "type": "string"
+        }
+      },
+      "required": [
+        "default_duration_s",
+        "max_duration_s"
+      ],
+      "title": "TimerConfig",
+      "type": "object"
+    },
+    "TimerNode": {
+      "additionalProperties": false,
+      "description": "The host's countdown: the time left, large, inside a ring that empties as it runs (a timer binding only).",
+      "properties": {
+        "when": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FieldCondition"
+            },
+            {
+              "$ref": "#/$defs/CapabilityCondition"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Show this component only when the condition holds.",
+          "title": "When"
+        },
+        "kind": {
+          "const": "timer",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "TimerNode",
       "type": "object"
     },
     "ToggleNode": {
@@ -1086,7 +1306,13 @@
             "state.muted",
             "state.media_title",
             "state.media_artist",
-            "state.updated_at"
+            "state.updated_at",
+            "source.title",
+            "source.channel",
+            "timer.remaining",
+            "timer.duration",
+            "timer.running",
+            "timer.finished"
           ],
           "title": "Field",
           "type": "string"
@@ -1144,6 +1370,7 @@
                   "status": "#/$defs/StatusNode",
                   "stepper": "#/$defs/StepperNode",
                   "text": "#/$defs/TextNode",
+                  "timer": "#/$defs/TimerNode",
                   "toggle": "#/$defs/ToggleNode",
                   "value": "#/$defs/ValueNode"
                 },
@@ -1185,6 +1412,9 @@
                 },
                 {
                   "$ref": "#/$defs/ButtonNode"
+                },
+                {
+                  "$ref": "#/$defs/TimerNode"
                 }
               ]
             },
@@ -1210,6 +1440,7 @@
                   "status": "#/$defs/StatusNode",
                   "stepper": "#/$defs/StepperNode",
                   "text": "#/$defs/TextNode",
+                  "timer": "#/$defs/TimerNode",
                   "toggle": "#/$defs/ToggleNode",
                   "value": "#/$defs/ValueNode"
                 },
@@ -1251,6 +1482,9 @@
                 },
                 {
                   "$ref": "#/$defs/ButtonNode"
+                },
+                {
+                  "$ref": "#/$defs/TimerNode"
                 }
               ]
             },
@@ -1276,6 +1510,7 @@
                   "status": "#/$defs/StatusNode",
                   "stepper": "#/$defs/StepperNode",
                   "text": "#/$defs/TextNode",
+                  "timer": "#/$defs/TimerNode",
                   "toggle": "#/$defs/ToggleNode",
                   "value": "#/$defs/ValueNode"
                 },
@@ -1317,6 +1552,9 @@
                 },
                 {
                   "$ref": "#/$defs/ButtonNode"
+                },
+                {
+                  "$ref": "#/$defs/TimerNode"
                 }
               ]
             },
